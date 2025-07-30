@@ -1,1 +1,3 @@
-/storageApp
+ Ignore environment files
+.env
+.env.local
