@@ -13,7 +13,7 @@ import {
   renameDirectory,
 } from './api/directoryApi';
 
-import { deleteFile, renameFile } from './api/fileApi';
+import { deleteFile, renameFile, uploadComplete, uploadInitiate } from './api/fileApi';
 import DetailsPopup from './components/DetailsPopup';
 import ConfirmDeleteModal from './components/ConfirmDeleteModel';
 import { BACKEND_URL } from './config';
@@ -26,8 +26,8 @@ function DirectoryView() {
 
   const [directoryName, setDirectoryName] = useState('My Drive');
   const [directoriesList, setDirectoriesList] = useState([]);
-   const [filesList, setFilesList] = useState([]);
-   const [errorMessage, setErrorMessage] = useState('');
+  const [filesList, setFilesList] = useState([]);
+  const [errorMessage, setErrorMessage] = useState('');
   const [showCreateDirModal, setShowCreateDirModal] = useState(false);
   const [newDirname, setNewDirname] = useState('New Folder');
   const [showRenameModal, setShowRenameModal] = useState(false);
@@ -36,14 +36,16 @@ function DirectoryView() {
   const [renameValue, setRenameValue] = useState('');
 
   const fileInputRef = useRef(null);
-  const [uploadQueue, setUploadQueue] = useState([]);
-  const [uploadXhrMap, setUploadXhrMap] = useState({});
-  const [progressMap, setProgressMap] = useState({});
-  const [isUploading, setIsUploading] = useState(false);
+
+  // Single-file upload state
+  const [uploadItem, setUploadItem] = useState(null); // { id, file, name, size, progress, isUploading }
+  const xhrRef = useRef(null);
+
   const [activeContextMenu, setActiveContextMenu] = useState(null);
   const [detailsItem, setDetailsItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
-   const openDetailsPopup = (item) => {
+
+  const openDetailsPopup = (item) => {
     console.log(item);
     setDetailsItem(item);
   };
@@ -109,96 +111,113 @@ function DirectoryView() {
       'Files larger than 15MB will be skipped.\nDo you want to continue?'
     );
 
-    console.log('User confirmation:', isAllowToProceed);
-    if (!isAllowToProceed) return;
+    if (!isAllowToProceed) {
+      e.target.value = '';
+      return;
+    }
 
     const uploadSizeLimit = 250 * 1024 * 1024; // Max 250MB
 
     const { storageLimit, storageUsed } = await fetchUser();
-    console.log({ storageLimit, storageUsed });
+    // console.log({ storageLimit, storageUsed });
     const remainingStorage = storageLimit - storageUsed;
+    // console.log({ remainingStorage });
 
-    console.log({ remainingStorage });
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    const selectedFiles = Array.from(e.target.files);
-    if (!selectedFiles.length) return;
-
-    const newItems = selectedFiles
-      .filter((file) => file.size <= uploadSizeLimit)
-      .map((file) => {
-        console.log({ size: file.size });
-        if (file.size > remainingStorage) throw 'file size exceed the limit of available space';
-        return {
-          file,
-          name: file.name,
-          size: file.size,
-          id: `temp-${Date.now()}-${Math.random()}`,
-          isUploading: false,
-        };
-      });
-
-    console.log({ newItems });
-
-    setFilesList((prev) => [...newItems, ...prev]);
-    newItems.forEach((item) => {
-      setProgressMap((prev) => ({ ...prev, [item.id]: 0 }));
-    });
-    setUploadQueue((prev) => [...prev, ...newItems]);
-    e.target.value = '';
-
-    if (!isUploading) {
-      setIsUploading(true);
-      processUploadQueue([...uploadQueue, ...newItems.reverse()]);
+    if (file.size > uploadSizeLimit) {
+      return setErrorMessage('File exceeds the 250MB upload limit.');
     }
-  }
 
-  function processUploadQueue(queue) {
-    if (!queue.length) {
-      setIsUploading(false);
-      setUploadQueue([]);
-      setTimeout(() => loadDirectory(), 1000);
+    if (file.size > remainingStorage) {
+      return setErrorMessage('Not enough storage space available.');
+    }
+
+    if (uploadItem?.isUploading) {
+      e.target.value = '';
+      setErrorMessage('An upload is already in progress. Please wait.');
+      setTimeout(() => setErrorMessage(''), 3000);
       return;
     }
 
-    const [currentItem, ...restQueue] = queue;
-    setFilesList((prev) =>
-      prev.map((f) => (f.id === currentItem.id ? { ...f, isUploading: true } : f))
-    );
+    const tempItem = {
+      file,
+      name: file.name,
+      size: file.size,
+      ContentType: file.type,
+      id: `temp-${Date.now()}`,
+      isUploading: true,
+      progress: 0,
+    };
 
+    try {
+      const data = await uploadInitiate({
+        fileName: file.name,
+        fileSize: file.size,
+        fileContentType: file.type,
+        parentDirectoryId: dirId || '',
+      });
+
+      const { fileId, uploadSignedUrl } = data;
+
+      //Optimistically show the file in the list
+      setFilesList((prev) => [tempItem, ...prev]);
+      setUploadItem(tempItem);
+      e.target.value = '';
+
+      startUpload({ item: tempItem, uploadUrl: uploadSignedUrl, fileId });
+    } catch (error) {
+      setErrorMessage(error.response.data.error);
+      setTimeout(() => setErrorMessage(''), 3000);
+    }
+  }
+
+  function startUpload({ item, uploadUrl, fileId }) {
+    console.log({ uploadUrl });
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', `${BACKEND_URL}/file/${dirId || ''}`);
-    xhr.withCredentials = true;
-    xhr.setRequestHeader('filename', currentItem.name);
-    xhr.setRequestHeader('filesize', currentItem.size);
+    xhrRef.current = xhr;
+
+    xhr.open('PUT', uploadUrl);
 
     xhr.upload.addEventListener('progress', (evt) => {
       if (evt.lengthComputable) {
         const progress = (evt.loaded / evt.total) * 100;
-        setProgressMap((prev) => ({ ...prev, [currentItem.id]: progress }));
+        setUploadItem((prev) => (prev ? { ...prev, progress } : prev));
       }
     });
 
-    xhr.onload = () => processUploadQueue(restQueue);
-    xhr.onerror = () => processUploadQueue(restQueue);
+    xhr.onload = async () => {
+      if (xhr.status === 200) {
+        const response = await uploadComplete(fileId);
+        console.log({ response: response });
+        // Clear upload state and refresh directory
+      } else {
+        setErrorMessage('File upload failed!');
+        setTimeout(() => setErrorMessage(''), 3000);
+      }
+      setUploadItem(null);
+      loadDirectory();
+    };
 
-    setUploadXhrMap((prev) => ({ ...prev, [currentItem.id]: xhr }));
-    xhr.send(currentItem.file);
+    xhr.onerror = () => {
+      setErrorMessage('Something went wrong!');
+      // Remove temp item from the list
+      setFilesList((prev) => prev.filter((f) => f.id !== item.id));
+      setUploadItem(null);
+      setTimeout(() => setErrorMessage(''), 3000);
+    };
+
+    xhr.send(item.file);
   }
 
   function handleCancelUpload(tempId) {
-    const xhr = uploadXhrMap[tempId];
-    if (xhr) xhr.abort();
-    setUploadQueue((prev) => prev.filter((item) => item.id !== tempId));
+    if (uploadItem && uploadItem.id === tempId && xhrRef.current) {
+      xhrRef.current.abort();
+    }
+    // Remove temp item and reset state
     setFilesList((prev) => prev.filter((f) => f.id !== tempId));
-    setProgressMap((prev) => {
-      const { [tempId]: _, ...rest } = prev;
-      return rest;
-    });
-    setUploadXhrMap((prev) => {
-      const copy = { ...prev };
-      delete copy[tempId];
-      return copy;
-    });
+    setUploadItem(null);
   }
 
   async function confirmDelete(item) {
@@ -261,6 +280,10 @@ function DirectoryView() {
     ...filesList.map((f) => ({ ...f, isDirectory: false })),
   ];
 
+  // For compatibility with children expecting these values:
+  const isUploading = !!uploadItem?.isUploading;
+  const progressMap = uploadItem ? { [uploadItem.id]: uploadItem.progress || 0 } : {};
+
   return (
     <DirectoryContext.Provider
       value={{
@@ -283,7 +306,7 @@ function DirectoryView() {
       <div className="mx-2 md:mx-4">
         {errorMessage &&
           errorMessage !== 'Directory not found or you do not have access to it!' && (
-            <div className="error-message">{errorMessage}</div>
+            <div className="error-message text-red-500 text-center">{errorMessage}</div>
           )}
 
         <DirectoryHeader

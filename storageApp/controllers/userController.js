@@ -6,7 +6,7 @@ import { OTP } from '../models/otpModel.js';
 import redisClient from '../config/redis.js';
 import { validateLoginSchema, validateRegisterSchema } from '../validators/authSchema.js';
 import { sanitizeUserInput } from '../validators/sanitizeUserInput.js';
- 
+
 export const register = async (req, res, next) => {
   const cleanInput = sanitizeUserInput(req.body);
   console.log('clean input:', cleanInput);
@@ -200,7 +200,6 @@ export const getCurrentUser = async (req, res) => {
   const { _id } = req.user;
   const { name, email, pictureUrl, role, rootDirId, storageLimit } =
     await User.findById(_id).lean();
-
   const rootDir = await Directory.findById(rootDirId).lean();
   res.status(200).json({
     name,

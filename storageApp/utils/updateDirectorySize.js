@@ -5,6 +5,7 @@ export default async function updateDirectorySize(parentId, deltaSize) {
   while (parentId) {
     const parentDir = await Directory.findById(parentId);
     parentDir.size += deltaSize;
+    console.log({ parentDirSize: parentDir.size });
     await parentDir.save();
     parentId = parentDir.parentDirId;
   }

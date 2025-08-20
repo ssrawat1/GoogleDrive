@@ -15,7 +15,7 @@ console.log(
 );
 console.log(
   "%cIf you don't understand what this is, close this tab immediately.",
-  'color: #ffd700; font-size: 14px; font-style: italic;'
+  'color: #ff4500; font-size: 14px; font-style: italic;'
 );
 
 createRoot(document.getElementById('root')).render(

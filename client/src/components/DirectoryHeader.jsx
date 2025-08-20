@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { fetchUser, logoutUser, logoutAllSessions } from '../api/userApi';
 import { FaFolderPlus, FaUpload, FaUser, FaSignOutAlt, FaSignInAlt } from 'react-icons/fa';
 import { formatSize } from './DetailsPopup';
+import { getDirectoryItems } from '../api/directoryApi';
 
 function DirectoryHeader({
   directoryName,
@@ -41,7 +42,11 @@ function DirectoryHeader({
     loadUser();
   }, []);
 
-  const handleUserIconClick = () => {
+
+  const handleUserIconClick = async () => {
+    const data = await fetchUser();
+    setStorageUsed(data.storageUsed);
+    setStorageLimit(data.storageLimit);
     setShowUserMenu((prev) => !prev);
   };
 
@@ -110,8 +115,7 @@ function DirectoryHeader({
           id="file-upload"
           type="file"
           className="hidden"
-          multiple
-          onChange={handleFileSelect}
+           onChange={handleFileSelect}
         />
         <div className="relative flex" ref={userMenuRef}>
           <button
@@ -136,13 +140,15 @@ function DirectoryHeader({
                       <div className="w-40 h-1 bg-gray-300 rounded-full overflow-hidden mb-1">
                         <div
                           className="bg-blue-500 rounded-full h-full"
-                          style={{ width: `${((storageUsed / storageLimit) * 100).toFixed(2)}%` }}
+                          style={{
+                            width: `${((storageUsed / storageLimit) * 100 || 0).toFixed(2)}%`,
+                          }}
                         ></div>
                       </div>
                       <div className="text-xs">
                         <strong> {formatSize(storageUsed)}</strong> used of
-                        <strong> {parseInt(formatSize(storageLimit))} GB</strong> (
-                        {`${((storageUsed / storageLimit) * 100).toFixed(2)}%`})
+                        <strong> {formatSize(storageLimit).replaceAll('.00', ' ')} </strong> (
+                        {`${((storageUsed / storageLimit) * 100 || 0).toFixed()}%`})
                       </div>
                     </div>
                   </div>

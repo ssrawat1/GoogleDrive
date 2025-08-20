@@ -24,6 +24,11 @@ const fileSchema = new Schema(
       required: true,
       ref: 'User',
     },
+    isUploading: {
+      type: Boolean,
+      required: true,
+      default:true,
+    },
   },
   { strict: 'throw', timestamps: true }
 );

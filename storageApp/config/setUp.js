@@ -60,7 +60,7 @@ try {
               description: 'Must be one of: "Admin", "Manager", or "User".',
             },
             storageLimit: {
-              bsonType: 'long',
+              bsonType: 'double',
               description: 'Maximum storage allowed for the user in bytes.',
             },
 

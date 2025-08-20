@@ -1,4 +1,3 @@
-import { rm } from 'fs/promises';
 import { Directory } from '../models/directoryModel.js';
 import { File } from '../models/fileModel.js';
 import { JSDOM } from 'jsdom';
@@ -7,7 +6,7 @@ import updateDirectorySize, {
   getPathAndBreadcrumbs,
   getFolderStatsRecursive,
 } from '../utils/updateDirectorySize.js';
-import { resolve } from 'path';
+import { deleteAllFilesFromS3 } from '../services/s3.js';
 
 export const getDirectory = async (req, res) => {
   const user = req.user;
@@ -132,9 +131,6 @@ export const deleteDirectory = async (req, res, next) => {
     .select('_id size parentDirId')
     .lean();
 
-  console.log(directoryData);
-  console.log({ id });
-
   if (!directoryData) {
     return res.status(404).json({ message: 'directory not found!' });
   }
@@ -152,7 +148,6 @@ export const deleteDirectory = async (req, res, next) => {
     // }
 
     for (const { _id, name } of directories) {
-      console.log(name);
       /* i can delete all the directories here but making thousand of delete calls to database is not good,I store the files and directories  so that i can delete them later in one database call */
       const { files: childFiles, directories: childDirectories } = await getDirectoryContents(_id);
       files = [...files, ...childFiles];
@@ -165,16 +160,25 @@ export const deleteDirectory = async (req, res, next) => {
   try {
     const { files, directories } = await getDirectoryContents(id);
 
+    const keys = files.map(({ _id, extension }) => ({ Key: `${_id}${extension}` }));
+
     // Removing files from storage
-    for (const { _id, extension } of files) {
-      const filePath = resolve(import.meta.dirname, '../storage', `${_id.toString()}${extension}`);
-      await rm(filePath);
+    //DeleteObjectsCommand requires at least one object in Delete.Objects
+    if (keys.length > 0) {
+      const s3Response = await deleteAllFilesFromS3({ keys });
+      console.log('S3 Response:', s3Response);
     }
+
+    // for (const { _id, extension } of files) {
+    //   const filePath = resolve(import.meta.dirname, '../storage', `${_id.toString()}${extension}`);
+    //   await rm(filePath);
+    // }
 
     // Removing files from DB
     await File.deleteMany({ _id: { $in: files.map(({ _id }) => _id) } });
 
     // Removing directories from DB
+    console.log('deleting from DB...');
     await Directory.deleteMany({
       _id: { $in: [...directories.map(({ _id }) => _id), id] },
     });
