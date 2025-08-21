@@ -140,7 +140,7 @@ export const getFile = async (req, res, next) => {
     const key = `${id}${fileData.extension}`;
     const filename = fileData.name;
     const action = req.query.action === 'download' ? 'download' : 'open';
-
+ 
     // Allow client To Preview & Download Files in Browser
     const cloudFrontSignedUrl = createCloudFrontGetSignedUrl({ key, action, filename });
 
