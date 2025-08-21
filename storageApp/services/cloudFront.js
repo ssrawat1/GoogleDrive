@@ -1,7 +1,8 @@
 import { getSignedUrl } from '@aws-sdk/cloudfront-signer';
 import { readFile } from 'node:fs/promises';
 
-const privateKey = await readFile('./cloudfront.pem', 'utf-8');
+const privateKey = process.env.CLOUD_FRONT_PRIVATE_KEY.replace(/\\n/g, '\n');
+console.log({privateKey})
 const keyPairId = process.env.CLOUDFRONT_KEY_PAIR_ID;
 const dateLessThan = new Date(Date.now() + 1000 * 60 * 60).toISOString(); // valid for 1 hr only
 
@@ -16,6 +17,6 @@ export const createCloudFrontGetSignedUrl = ({ key, action, filename }) => {
     dateLessThan,
     privateKey,
   });
-  console.log(signedUrl)
+  console.log(signedUrl);
   return signedUrl;
 };
