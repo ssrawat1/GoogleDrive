@@ -10,6 +10,7 @@ import { connectDB } from './config/db.js';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { throttle } from './middlewares/throttleMiddleware.js';
+import { Server } from 'lucide-react';
 
 await connectDB();
 const app = express();
@@ -75,7 +76,7 @@ app.use((err, req, res, next) => {
   res.json(err);
   // res.status(err.status || 500).json({ error: 'Something went wrong!' });
 });
- 
-app.listen(PORT, () => {
+
+const server = app.listen(PORT,() => {
   console.log(`server is listening on address http://localhost:${PORT}`);
 });

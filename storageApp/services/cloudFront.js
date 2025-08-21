@@ -2,10 +2,10 @@ import { getSignedUrl } from '@aws-sdk/cloudfront-signer';
 import { readFile } from 'node:fs/promises';
 
 const privateKey = await readFile('./cloudfront.pem', 'utf-8');
-const keyPairId = 'KUOIOTHB4PV8E';
+const keyPairId = process.env.CLOUDFRONT_KEY_PAIR_ID;
 const dateLessThan = new Date(Date.now() + 1000 * 60 * 60).toISOString(); // valid for 1 hr only
 
-const distributionName = `https://d3w6pars2gmcd.cloudfront.net`;
+const distributionName = process.env.CLOUDFRONT_DISTRIBUTION_URL;
 
 export const createCloudFrontGetSignedUrl = ({ key, action, filename }) => {
   const disposition = `${action === 'download' ? 'attachment' : 'inline'};filename="${filename}"`;
@@ -16,6 +16,6 @@ export const createCloudFrontGetSignedUrl = ({ key, action, filename }) => {
     dateLessThan,
     privateKey,
   });
-  console.log({ signedUrl });
+  console.log(signedUrl)
   return signedUrl;
 };
