@@ -1,9 +1,7 @@
 import { getSignedUrl } from '@aws-sdk/cloudfront-signer';
-import { readFile } from 'node:fs/promises';
-
+ 
 const privateKey = process.env.CLOUD_FRONT_PRIVATE_KEY.replace(/\\n/g, '\n');
-console.log({privateKey})
-const keyPairId = process.env.CLOUDFRONT_KEY_PAIR_ID;
+ const keyPairId = process.env.CLOUDFRONT_KEY_PAIR_ID;
 const dateLessThan = new Date(Date.now() + 1000 * 60 * 60).toISOString(); // valid for 1 hr only
 
 const distributionName = process.env.CLOUDFRONT_DISTRIBUTION_URL;

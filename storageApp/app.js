@@ -10,8 +10,7 @@ import { connectDB } from './config/db.js';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { throttle } from './middlewares/throttleMiddleware.js';
-import { Server } from 'lucide-react';
-
+ 
 await connectDB();
 const app = express();
 
