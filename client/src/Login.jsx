@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import { loginWithGoogle } from './api/authApi';
-import { loginUser } from './api/userApi';
+ import { loginUser } from './api/userApi';
 import DOMPurify from 'dompurify';
+import { loginWithGoogle } from './api/loginWithGoogleApi';
 
 const Login = () => {
   const [formData, setFormData] = useState({

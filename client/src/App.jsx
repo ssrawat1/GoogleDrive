@@ -3,6 +3,7 @@ import DirectoryView from './DirectoryView';
 import Register from './Register';
 import Login from './Login';
 import UsersPage from './UsersPage';
+import GithubAuth from './components/GithubAuth';
 
 const router = createBrowserRouter([
   {
@@ -26,6 +27,10 @@ const router = createBrowserRouter([
     path: '/directory/:dirId',
     element: <DirectoryView />,
   },
+  {
+    path:"/auth/github",
+    element:<GithubAuth/>
+  }
 ]);
 
 function App() {

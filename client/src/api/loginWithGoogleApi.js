@@ -1,5 +1,6 @@
- 
+import { axiosWithCreds } from './axiosInstances';
+
 export const loginWithGoogle = async (idToken) => {
-  const { data } = await axiosWithCreds.post("/auth/google", { idToken });
+   const { data } = await axiosWithCreds.post('/auth/google', { idToken });
   return data;
 };

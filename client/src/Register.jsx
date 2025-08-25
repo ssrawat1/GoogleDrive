@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import { loginWithGoogle, sendOtp, verifyOtp } from './api/authApi';
+import { sendOtp, verifyOtp } from './api/authApi';
 import { registerUser } from './api/userApi';
 import DOMPurify from 'dompurify';
+import { FaGithub } from 'react-icons/fa';
+import { loginWithGoogle } from './api/loginWithGoogleApi';
+import { GITHUB_CLIENT_ID } from './config';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -88,6 +91,36 @@ const Register = () => {
       setServerError(err.response?.data?.error || 'Something went wrong.');
     }
   };
+
+  const handleGithubLogin = () => {
+    const clientId = GITHUB_CLIENT_ID;
+    const redirectUri = 'http://localhost:5173/auth/github';
+    const scope = 'read:user user:email';
+
+    // GitHub OAuth URL
+    const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
+      redirectUri
+    )}&scope=${scope}`;
+
+    // Open GitHub popup (like Google)
+    window.location.href = githubAuthUrl;
+  };
+
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('code');
+    if (code) {
+      fetch('http://localhost:5000/auth/github', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          localStorage.setItem('token', data.token);
+          navigate('/');
+        });
+    }
+  }, [navigate]);
 
   return (
     <div className="max-w-md mx-auto p-5">
@@ -189,7 +222,7 @@ const Register = () => {
 
       <div className="relative text-center my-3">
         <div className="absolute inset-x-0 top-1/2 transform -translate-y-1/2 h-[2px] bg-gray-300"></div>
-        <span className="relative bg-white px-2 text-sm text-gray-600">Or</span>
+        <span className="relative bg-white px-2 text-xs text-gray-600">Or</span>
       </div>
 
       <div className="flex justify-center">
@@ -200,9 +233,23 @@ const Register = () => {
           }}
           onError={() => console.log('Login Failed')}
           theme="filled_blue"
+          width={230}
           text="continue_with"
           useOneTap
         />
+      </div>
+      <div className="relative text-center my-2">
+        <div className="absolute inset-x-0 top-1/2 transform -translate-y-1/2 h-[2px] bg-gray-300"></div>
+        <span className="relative bg-white px-2 text-xs text-gray-600">Or</span>
+      </div>
+      <div className="flex justify-center mt-1">
+        <button
+          onClick={handleGithubLogin}
+          className="flex items-center bg-gray-800 text-white py-2 px-4 rounded hover:opacity-85"
+        >
+          <FaGithub className="mr-2" size={20} />
+          Continue with GitHub
+        </button>
       </div>
     </div>
   );

@@ -10,9 +10,11 @@ import { connectDB } from './config/db.js';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { throttle } from './middlewares/throttleMiddleware.js';
- 
+
 await connectDB();
 const app = express();
+
+app.disable('x-powered-by');
 
 /* .env */
 const Secret_Key = process.env.SECRET_KEY;
@@ -76,6 +78,6 @@ app.use((err, req, res, next) => {
   // res.status(err.status || 500).json({ error: 'Something went wrong!' });
 });
 
-const server = app.listen(PORT,() => {
+const server = app.listen(PORT, () => {
   console.log(`server is listening on address http://localhost:${PORT}`);
 });
