@@ -16,7 +16,7 @@ const Register = () => {
   });
   const [serverError, setServerError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
-  const [otp, setOtp] =- useState('');
+  const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [otpError, setOtpError] = useState('');
